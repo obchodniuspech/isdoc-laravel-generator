@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace YourNamespace\IsdocInvoiceGenerator\Providers;
+namespace Obchodniuspech\IsdocInvoiceGenerator\Providers;
 
 use Illuminate\Support\ServiceProvider;
 use Obchodniuspech\IsdocInvoiceGenerator\Services\IsdocService;
