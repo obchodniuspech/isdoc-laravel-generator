@@ -1,0 +1,26 @@
+{
+  "name": "obchodniuspech/isdoc-invoice-generator",
+  "description": "A Laravel package for generating ISDOC invoices",
+  "type": "library",
+  "require": {
+    "php": "^7.4|^8.0",
+    "illuminate/support": "^8.0|^9.0|^10.0"
+  },
+  "autoload": {
+    "psr-4": {
+      "Obchodniuspech\\IsdocInvoiceGenerator\\": "src/"
+    }
+  },
+  "extra": {
+    "laravel": {
+      "providers": [
+        "Obchodniuspech\\IsdocInvoiceGenerator\\Providers\\IsdocServiceProvider"
+      ]
+    }
+  },
+  "require-dev": {
+    "phpunit/phpunit": "^9.0"
+  },
+  "minimum-stability": "dev",
+  "prefer-stable": true
+}
