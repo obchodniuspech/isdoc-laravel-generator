@@ -4,22 +4,28 @@ declare(strict_types=1);
 
 namespace Obchodniuspech\IsdocInvoiceGenerator\Services;
 
+use Obchodniuspech\IsdocInvoiceGenerator\Entities\IsdocInvoiceEntity;
+use Obchodniuspech\IsdocInvoiceGenerator\Entities\IsdocPartyEntity;
 use SimpleXMLElement;
 
 class IsdocService
 {
-  public function generateInvoice(array $data): string
+  /**
+   * @param IsdocInvoiceEntity $data
+   * @return string
+   */
+  public function generateInvoice(IsdocInvoiceEntity $data): string
   {
     $invoice = new SimpleXMLElement('<Invoice xmlns="urn:cz:isdoc:v6" version="6.0"></Invoice>');
 
     // invoice header
     $header = $invoice->addChild('InvoiceHeader');
-    $header->addChild('ID', $data['id']);
-    $header->addChild('InvoiceType', $data['invoice_type']);
-    $header->addChild('IssueDate', $data['issue_date']);
-    $header->addChild('DueDate', $data['due_date']);
-    $header->addChild('TaxPointDate', $data['tax_point_date']);
-    $header->addChild('VATApplicable', $data['vat_applicable'] ? 'true' : 'false');
+    $header->addChild('ID', $data->invoiceId);
+    $header->addChild('InvoiceType', $data->invoiceType->value);
+    $header->addChild('IssueDate', $data->issuedDate->toDateString());
+    $header->addChild('DueDate', $data->dueDate->toDateString());
+    $header->addChild('TaxPointDate', $data->taxDueDate->toDateString());
+    $header->addChild('VATApplicable', $data->vatApplicable ? 'true' : 'false');
 
     // invoice parties
     $parties = $invoice->addChild('InvoiceParties');
@@ -46,10 +52,10 @@ class IsdocService
     return $invoice->asXML();
   }
 
-  private function addParty(SimpleXMLElement $parent, string $type, array $data)
+  private function addParty(SimpleXMLElement $parent, string $type, IsdocPartyEntity $data)
   {
     $party = $parent->addChild($type)->addChild('Party');
-    $party->addChild('PartyIdentification')->addChild('ID', $data['id']);
+    $party->addChild('PartyIdentification')->addChild('ID', $data->companyId);
     $party->addChild('PartyName')->addChild('Name', $data['name']);
     $address = $party->addChild('PostalAddress');
     $address->addChild('StreetName', $data['address']['street']);
