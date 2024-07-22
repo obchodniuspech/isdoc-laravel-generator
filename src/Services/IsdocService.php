@@ -20,17 +20,33 @@ class IsdocService
 
     // invoice header
     $header = $invoice->addChild('InvoiceHeader');
+    $header->addChild('DocumentType', '1');
+    $header->addChild('UUID', 'A126D4C4-118C-FE70-43BD-B05E4ACCE94E');
+    $header->addChild('IssuingSystem', config('APP_NAME'));
     $header->addChild('ID', $data->invoiceId);
+    $header->addChild('Note', '');
     $header->addChild('InvoiceType', $data->invoiceType->value);
     $header->addChild('IssueDate', $data->issuedDate->toDateString());
     $header->addChild('DueDate', $data->dueDate->toDateString());
     $header->addChild('TaxPointDate', $data->taxDueDate->toDateString());
     $header->addChild('VATApplicable', $data->vatApplicable ? 'true' : 'false');
+    $header->addChild('LocalCurrencyCode', 'CZK');
+    $header->addChild('CurrRate', '1.0');
+    $header->addChild('RefCurrRate', '1');
 
     // invoice parties
-    $parties = $invoice->addChild('InvoiceParties');
-    $this->addParty($parties, 'SellerParty', $data->seller);
-    $this->addParty($parties, 'BuyerParty', $data->buyer);
+    //$parties = $invoice->addChild('InvoiceParties');
+
+    // Accounting supplier party
+    $this->addParty($invoice, 'AccountingSupplierParty', $data->seller);
+    // Seller supplier party
+    $this->addParty($invoice, 'SellerSupplierParty', $data->seller);
+
+    // Accounting customer party
+    $this->addParty($invoice, 'AccountingCustomerParty', $data->buyer);
+
+    // Buyer customer party
+    $this->addParty($invoice, 'BuyerCustomerParty', $data->buyer);
 
     // invoice items
     $lines = $invoice->addChild('InvoiceLines');
@@ -48,6 +64,32 @@ class IsdocService
     $totals->addChild('TaxExclusiveAmount', $data->totals->getTaxExclusive());
     $totals->addChild('TaxInclusiveAmount', $data->totals->getTaxInclusive());
     $totals->addChild('PayableAmount', $data->totals->getPayable());
+
+    // invoice merged info
+    $totals = $invoice->addChild('LegalMonetaryTotal');
+    $totals->addChild('TaxExclusiveAmount', $data->totals->getTaxExclusive());
+    $totals->addChild('TaxInclusiveAmount', $data->totals->getTaxInclusive());
+    $totals->addChild('AlreadyClaimedTaxExclusiveAmount', '0'); // Add actual value
+    $totals->addChild('AlreadyClaimedTaxInclusiveAmount', '0'); // Add actual value
+    $totals->addChild('DifferenceTaxExclusiveAmount', $data->totals->getTaxExclusive()); // Add actual value
+    $totals->addChild('DifferenceTaxInclusiveAmount', $data->totals->getTaxInclusive()); // Add actual value
+    $totals->addChild('PayableRoundingAmount', '0'); // Add actual value
+    $totals->addChild('PaidDepositsAmount', '0'); // Add actual value
+    $totals->addChild('PayableAmount', $data->totals->getPayable());
+
+    // Payment means
+    /*$paymentMeans = $invoice->addChild('PaymentMeans');
+    $payment = $paymentMeans->addChild('Payment');
+    $payment->addChild('PaidAmount', '7260.0'); // Add actual value
+    $payment->addChild('PaymentMeansCode', '42'); // Change to appropriate value
+    $details = $payment->addChild('Details');
+    $details->addChild('PaymentDueDate', '2024-07-23'); // Add actual value
+    $details->addChild('ID', '2900499336'); // Add actual value
+    $details->addChild('BankCode', '2010'); // Add actual value
+    $details->addChild('Name', 'Fio banka'); // Add actual value
+    $details->addChild('IBAN', 'CZ4820100000002900499336'); // Add actual value
+    $details->addChild('BIC', 'FIOBCZPPXXX'); // Add actual value
+    $details->addChild('VariableSymbol', '20240002'); // Add actual value*/
 
     return $invoice->asXML();
   }
