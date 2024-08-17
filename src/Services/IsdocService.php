@@ -10,103 +10,147 @@ use SimpleXMLElement;
 
 class IsdocService
 {
-  /**
-   * @param IsdocInvoiceEntity $data
-   * @return string
-   */
-  public function generateInvoice(IsdocInvoiceEntity $data): string
-  {
-    $invoice = new SimpleXMLElement('<Invoice xmlns="urn:cz:isdoc:v6" version="6.0"></Invoice>');
+    public function generateInvoice(IsdocInvoiceEntity $data): string
+    {
+        $invoice = new SimpleXMLElement('<Invoice xmlns="http://isdoc.cz/namespace/2013" version="6.0.2"></Invoice>');
 
-    // invoice header
-    $header = $invoice->addChild('InvoiceHeader');
-    $header->addChild('DocumentType', '1');
-    $header->addChild('UUID', 'A126D4C4-118C-FE70-43BD-B05E4ACCE94E');
-    $header->addChild('IssuingSystem', config('APP_NAME'));
-    $header->addChild('ID', $data->invoiceId);
-    $header->addChild('Note', '');
-    $header->addChild('InvoiceType', $data->invoiceType->value);
-    $header->addChild('IssueDate', $data->issuedDate->toDateString());
-    $header->addChild('DueDate', $data->dueDate->toDateString());
-    $header->addChild('TaxPointDate', $data->taxDueDate->toDateString());
-    $header->addChild('VATApplicable', $data->vatApplicable ? 'true' : 'false');
-    $header->addChild('LocalCurrencyCode', 'CZK');
-    $header->addChild('CurrRate', '1.0');
-    $header->addChild('RefCurrRate', '1');
+        // Invoice header
+        $invoice->addChild('DocumentType', '1');
+        $invoice->addChild('ID', $data->invoiceId);
+        $invoice->addChild('UUID', 'A126D4C4-118C-FE70-43BD-B05E4ACCE94E');
+        $invoice->addChild('IssuingSystem', 'Ekonomický a informační systém POHODA');
+        $invoice->addChild('IssueDate', $data->issuedDate->toDateString());
+        $invoice->addChild('TaxPointDate', $data->taxDueDate->toDateString());
+        $invoice->addChild('VATApplicable', $data->vatApplicable ? 'true' : 'false');
+        $invoice->addChild('ElectronicPossibilityAgreementReference', '');
+        $invoice->addChild('Note', $data->note); // Přidání poznámky
+        $invoice->addChild('LocalCurrencyCode', 'CZK');
+        $invoice->addChild('CurrRate', '1');
+        $invoice->addChild('RefCurrRate', '1');
 
-    // invoice parties
-    //$parties = $invoice->addChild('InvoiceParties');
+        // Accounting Supplier Party
+        $this->addParty($invoice, 'AccountingSupplierParty', $data->seller);
 
-    // Accounting supplier party
-    $this->addParty($invoice, 'AccountingSupplierParty', $data->seller);
-    // Seller supplier party
-    $this->addParty($invoice, 'SellerSupplierParty', $data->seller);
+        // Accounting Customer Party
+        $this->addParty($invoice, 'AccountingCustomerParty', $data->buyer);
 
-    // Accounting customer party
-    $this->addParty($invoice, 'AccountingCustomerParty', $data->buyer);
+        // Invoice Lines
+        $lines = $invoice->addChild('InvoiceLines');
+        foreach ($data->items as $item) {
+            $line = $lines->addChild('InvoiceLine');
+            $line->addChild('ID', $item->getItemId());
+            $line->addChild('InvoicedQuantity', $item->getQuantity())->addAttribute('unitCode', $item->unit);
+            $line->addChild('LineExtensionAmount', $item->getTotalPrice());
+            $line->addChild('LineExtensionAmountTaxInclusive', $item->getTotalPriceTaxInclusive()); // S daňovým zvýšením
+            $line->addChild('LineExtensionTaxAmount', $item->getTaxAmount());
+            $line->addChild('UnitPrice', $item->getUnitPrice());
+            $line->addChild('UnitPriceTaxInclusive', $item->getUnitPriceTaxInclusive()); // S daňovým zvýšením
+            $taxCategory = $line->addChild('ClassifiedTaxCategory');
+            $taxCategory->addChild('Percent', '21');
+            $taxCategory->addChild('VATCalculationMethod', '0');
+            $taxCategory->addChild('VATApplicable', 'true');
+            $line->addChild('Item')->addChild('Description', $item->description);
+        }
 
-    // Buyer customer party
-    $this->addParty($invoice, 'BuyerCustomerParty', $data->buyer);
+        // Tax Total
+        $taxTotal = $invoice->addChild('TaxTotal');
+        $taxSubTotal = $taxTotal->addChild('TaxSubTotal');
+        $taxSubTotal->addChild('TaxableAmount', $data->totals->getTaxExclusive());
+        $taxSubTotal->addChild('TaxAmount', $data->totals->getTaxAmount());
+        $taxSubTotal->addChild('TaxInclusiveAmount', $data->totals->getTaxInclusive());
+        $taxSubTotal->addChild('AlreadyClaimedTaxableAmount', '0');
+        $taxSubTotal->addChild('AlreadyClaimedTaxAmount', '0');
+        $taxSubTotal->addChild('AlreadyClaimedTaxInclusiveAmount', '0');
+        $taxSubTotal->addChild('DifferenceTaxableAmount', $data->totals->getTaxExclusive());
+        $taxSubTotal->addChild('DifferenceTaxAmount', $data->totals->getTaxAmount());
+        $taxSubTotal->addChild('DifferenceTaxInclusiveAmount', $data->totals->getTaxInclusive());
+        $taxCategory = $taxSubTotal->addChild('TaxCategory');
+        $taxCategory->addChild('Percent', '21');
+        $taxCategory->addChild('VATApplicable', 'true');
+        $taxCategory->addChild('LocalReverseChargeFlag', 'false');
+        $taxTotal->addChild('TaxAmount', $data->totals->getTaxAmount());
 
-    // invoice items
-    $lines = $invoice->addChild('InvoiceLines');
-    foreach ($data->items as $item) {
-      $line = $lines->addChild('InvoiceLine');
-      $line->addChild('ID', $item->getItemId());
-      $line->addChild('InvoicedQuantity', $item->getQuantity())->addAttribute('unitCode', $item->unit);
-      $line->addChild('Item')->addChild('Description', $item->description);
-      $line->addChild('UnitPrice', $item->getUnitPrice());
-      $line->addChild('LineExtensionAmount', $item->getTotalPrice());
+        // Legal Monetary Total
+        $totals = $invoice->addChild('LegalMonetaryTotal');
+        $totals->addChild('TaxExclusiveAmount', $data->totals->getTaxExclusive());
+        $totals->addChild('TaxInclusiveAmount', $data->totals->getTaxInclusive());
+        $totals->addChild('AlreadyClaimedTaxExclusiveAmount', '0');
+        $totals->addChild('AlreadyClaimedTaxInclusiveAmount', '0');
+        $totals->addChild('DifferenceTaxExclusiveAmount', $data->totals->getTaxExclusive());
+        $totals->addChild('DifferenceTaxInclusiveAmount', $data->totals->getTaxInclusive());
+        $totals->addChild('PayableRoundingAmount', '0');
+        $totals->addChild('PaidDepositsAmount', '0');
+        $totals->addChild('PayableAmount', $data->totals->getPayable());
+
+        // Payment Means
+        $paymentMeans = $invoice->addChild('PaymentMeans');
+        $payment = $paymentMeans->addChild('Payment');
+        $payment->addChild('PaidAmount', $data->totals->getPayable());
+        $payment->addChild('PaymentMeansCode', '42'); // Kód platby
+        $details = $payment->addChild('Details');
+        $details->addChild('PaymentDueDate', $data->dueDate->toDateString());
+
+        if ($data->getIBAN()) {
+            $details->addChild('ID', ''); // Číslo účtu
+            $details->addChild('BankCode', ''); // Kód banky
+            $details->addChild('Name', ''); // Název banky
+            $details->addChild('IBAN', $data->getIBAN()); // IBAN pokud existuje
+            $details->addChild('BIC', ''); // BIC
+        }
+        else {
+            $details->addChild('ID', $data->getAccount()); // Číslo účtu
+            $details->addChild('BankCode', $data->getBankCode()); // Kód banky
+            $details->addChild('Name', $data->getBankName()); // Název banky
+            $details->addChild('IBAN', '');
+            $details->addChild('BIC', '');
+        }
+
+        $details->addChild('VariableSymbol', $data->getVs());
+        $details->addChild('ConstantSymbol', $data->getKs()); // Konstantní symbol
+
+        $invoice = $invoice->asXML();
+        $this->validatInvoice($invoice);
+
+        return $invoice;
     }
 
-    // invoice merged info
-    $totals = $invoice->addChild('LegalMonetaryTotal');
-    $totals->addChild('TaxExclusiveAmount', $data->totals->getTaxExclusive());
-    $totals->addChild('TaxInclusiveAmount', $data->totals->getTaxInclusive());
-    $totals->addChild('PayableAmount', $data->totals->getPayable());
+    private function addParty(SimpleXMLElement $parent, string $type, IsdocPartyEntity $data)
+    {
+        $party = $parent->addChild($type)->addChild('Party');
+        $party->addChild('PartyIdentification')->addChild('ID', (string)$data->getCompanyId());
+        $party->addChild('PartyName')->addChild('Name', $data->getName());
+        $address = $party->addChild('PostalAddress');
+        $address->addChild('StreetName', $data->address->street);
+        $address->addChild('BuildingNumber', $data->address->number);
+        $address->addChild('CityName', $data->address->city);
+        $address->addChild('PostalZone', $data->address->getPostal());
+        $country = $address->addChild('Country');
+        $country->addChild('IdentificationCode', '');
+        $country->addChild('Name', '');
 
-    // invoice merged info
-    $totals = $invoice->addChild('LegalMonetaryTotal');
-    $totals->addChild('TaxExclusiveAmount', $data->totals->getTaxExclusive());
-    $totals->addChild('TaxInclusiveAmount', $data->totals->getTaxInclusive());
-    $totals->addChild('AlreadyClaimedTaxExclusiveAmount', '0'); // Add actual value
-    $totals->addChild('AlreadyClaimedTaxInclusiveAmount', '0'); // Add actual value
-    $totals->addChild('DifferenceTaxExclusiveAmount', $data->totals->getTaxExclusive()); // Add actual value
-    $totals->addChild('DifferenceTaxInclusiveAmount', $data->totals->getTaxInclusive()); // Add actual value
-    $totals->addChild('PayableRoundingAmount', '0'); // Add actual value
-    $totals->addChild('PaidDepositsAmount', '0'); // Add actual value
-    $totals->addChild('PayableAmount', $data->totals->getPayable());
+        $partyTaxScheme = $party->addChild('PartyTaxScheme');
+            $partyTaxScheme->addChild('CompanyID', $data->getTaxId());
+            $partyTaxScheme->addChild('TaxScheme', 'VAT');
 
-    // Payment means
-    /*$paymentMeans = $invoice->addChild('PaymentMeans');
-    $payment = $paymentMeans->addChild('Payment');
-    $payment->addChild('PaidAmount', '7260.0'); // Add actual value
-    $payment->addChild('PaymentMeansCode', '42'); // Change to appropriate value
-    $details = $payment->addChild('Details');
-    $details->addChild('PaymentDueDate', '2024-07-23'); // Add actual value
-    $details->addChild('ID', '2900499336'); // Add actual value
-    $details->addChild('BankCode', '2010'); // Add actual value
-    $details->addChild('Name', 'Fio banka'); // Add actual value
-    $details->addChild('IBAN', 'CZ4820100000002900499336'); // Add actual value
-    $details->addChild('BIC', 'FIOBCZPPXXX'); // Add actual value
-    $details->addChild('VariableSymbol', '20240002'); // Add actual value*/
+        $party->addChild('RegisterIdentification')->addChild('Preformatted', '');
+        $party->addChild('Contact');
+    }
 
-    return $invoice->asXML();
-  }
+    private function validatInvoice(string $invoice) {
+        libxml_use_internal_errors(true);
 
-  private function addParty(SimpleXMLElement $parent, string $type, IsdocPartyEntity $data)
-  {
-    $party = $parent->addChild($type)->addChild('Party');
-    $party->addChild('PartyIdentification')->addChild('ID', $data->getCompanyId());
-    $party->addChild('PartyName')->addChild('Name', $data->getName());
-    $address = $party->addChild('PostalAddress');
-    $address->addChild('StreetName', $data->address->street);
-    $address->addChild('BuildingNumber', $data->address->number);
-    $address->addChild('CityName', $data->address->city);
-    $address->addChild('PostalZone', $data->address->getPostal());
-    $address->addChild('Country')->addChild('IdentificationCode', $data->address->country);
-    $contact = $party->addChild('Contact');
-    $contact->addChild('Telephone', $data->contact->phone);
-    $contact->addChild('ElectronicMail', $data->contact->email);
-  }
+        $xml = new \DOMDocument();
+        $xml->loadXML($invoice);
+
+        $path = base_path() . '/vendor/obchodniuspech/isdoc-invoice-generator/src/Schema/isdoc-invoice-6.0.2.xsd';
+
+        if (!$xml->schemaValidate($path)) {
+            print '<b>DOMDocument::schemaValidate() Generated Errors!</b><br>';
+            foreach (libxml_get_errors() as $error) {
+                echo "Libxml error: {$error->message}\n";
+            }
+        }
+
+        libxml_use_internal_errors(false);
+    }
 }

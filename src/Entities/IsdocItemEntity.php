@@ -7,12 +7,15 @@ namespace Obchodniuspech\IsdocInvoiceGenerator\Entities;
 final class IsdocItemEntity
 {
   public function __construct(
-    public int $itemId,
+    public int|string $itemId,
     public int $quantity,
     public string $unit,
     public string $description,
     public float $unitPrice,
+    public float $unitPriceTax,
     public float $totalPrice,
+    public float $totalTax,
+    public float $totalPriceTax,
   )
   {}
 
@@ -45,5 +48,20 @@ final class IsdocItemEntity
   {
     return (string)$this->totalPrice;
   }
+
+    public function getTaxAmount()
+    {
+        return (string)$this->totalTax;
+    }
+
+    public function getUnitPriceTaxInclusive()
+    {
+        return (string)$this->unitPriceTax;
+    }
+
+public function getTotalPriceTaxInclusive(): string
+{
+    return (string)$this->totalPriceTax;
+}
 
 }

@@ -9,6 +9,7 @@ final class IsdocTotalsEntity
   public function __construct(
     public float $taxExclusive,
     public float $taxInclusive,
+    public float $tax,
     public float $payable,
   ) {}
 
@@ -26,4 +27,10 @@ final class IsdocTotalsEntity
   {
     return (string)$this->payable;
   }
+
+    public function getTaxAmount(): string
+    {
+        return (string)$this->tax;
+    }
+        
 }

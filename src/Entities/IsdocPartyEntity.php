@@ -6,11 +6,12 @@ namespace Obchodniuspech\IsdocInvoiceGenerator\Entities;
 final readonly class IsdocPartyEntity
 {
   public function __construct(
-    public int                $companyId,
-    public string             $companyVatId,
+    public ?int                $companyId,
+    public ?string             $companyVatId,
     public string             $name,
     public IsdocAddressEntity $address,
     public IsdocContactEntity $contact,
+    public IsdocContactTaxSchemeEntity $taxScheme,
   )
   {
   }
@@ -21,6 +22,11 @@ final readonly class IsdocPartyEntity
   }
 
   public function getCompanyVatId(): string
+  {
+    return $this->companyVatId;
+  }
+
+  public function getTaxId(): ?string
   {
     return $this->companyVatId;
   }
@@ -38,6 +44,11 @@ final readonly class IsdocPartyEntity
   public function getContact(): IsdocContactEntity
   {
     return $this->contact;
+  }
+  
+  public function getTaxScheme(): IsdocContactTaxSchemeEntity
+  {
+      return $this->taxScheme;
   }
 
 }

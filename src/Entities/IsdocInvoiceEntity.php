@@ -32,6 +32,14 @@ final class IsdocInvoiceEntity
     public IsdocPartyEntity $buyer,
     public array $items,
     public IsdocTotalsEntity $totals,
+    public string $note,
+    public ?int $account,
+    public ?string $bankCode,
+    public ?string $bankName,
+    public ?int $vs = null,
+    public ?int $ss = null,
+    public ?int $ks = null,
+    public ?string $iban = null,
   ) {}
 
   public function getInvoiceId(): string
@@ -83,4 +91,33 @@ final class IsdocInvoiceEntity
   {
     return $this->totals;
   }
+
+    public function getVs(): string
+    {
+        return (string)$this->vs;
+    }
+    public function getSs(): string
+    {
+        return (string)$this->ss;
+    }
+    public function getKs(): string
+    {
+        return (string)$this->ks;
+    }
+    public function getAccount(): string
+    {
+        return (string)$this->account;
+    }
+    public function getBankCode(): string
+    {
+        return (string)$this->bankCode;
+    }
+    public function getBankName(): string
+    {
+        return (string)$this->bankName;
+    }
+    public function getIBAN(): string
+    {
+        return (string)$this->iban;
+    }
 }
