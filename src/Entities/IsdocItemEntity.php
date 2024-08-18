@@ -16,6 +16,7 @@ final class IsdocItemEntity
     public float $totalPrice,
     public float $totalTax,
     public float $totalPriceTax,
+    public float $taxPercentage,  
   )
   {}
 
@@ -63,5 +64,10 @@ public function getTotalPriceTaxInclusive(): string
 {
     return (string)$this->totalPriceTax;
 }
+
+    public function getTaxPercentage()
+    {
+        return (string)$this->taxPercentage;
+    }
 
 }

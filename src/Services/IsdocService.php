@@ -46,7 +46,7 @@ class IsdocService
             $line->addChild('UnitPrice', $item->getUnitPrice());
             $line->addChild('UnitPriceTaxInclusive', $item->getUnitPriceTaxInclusive()); // S daňovým zvýšením
             $taxCategory = $line->addChild('ClassifiedTaxCategory');
-            $taxCategory->addChild('Percent', '21');
+            $taxCategory->addChild('Percent', $item->getTaxPercentage());
             $taxCategory->addChild('VATCalculationMethod', '0');
             $taxCategory->addChild('VATApplicable', 'true');
             $line->addChild('Item')->addChild('Description', $item->description);
