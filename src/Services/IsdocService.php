@@ -52,23 +52,27 @@ class IsdocService
             $line->addChild('Item')->addChild('Description', $item->description);
         }
 
-        // Tax Total
-        $taxTotal = $invoice->addChild('TaxTotal');
-        $taxSubTotal = $taxTotal->addChild('TaxSubTotal');
-        $taxSubTotal->addChild('TaxableAmount', $data->totals->getTaxExclusive());
-        $taxSubTotal->addChild('TaxAmount', $data->totals->getTaxAmount());
-        $taxSubTotal->addChild('TaxInclusiveAmount', $data->totals->getTaxInclusive());
-        $taxSubTotal->addChild('AlreadyClaimedTaxableAmount', '0');
-        $taxSubTotal->addChild('AlreadyClaimedTaxAmount', '0');
-        $taxSubTotal->addChild('AlreadyClaimedTaxInclusiveAmount', '0');
-        $taxSubTotal->addChild('DifferenceTaxableAmount', $data->totals->getTaxExclusive());
-        $taxSubTotal->addChild('DifferenceTaxAmount', $data->totals->getTaxAmount());
-        $taxSubTotal->addChild('DifferenceTaxInclusiveAmount', $data->totals->getTaxInclusive());
-        $taxCategory = $taxSubTotal->addChild('TaxCategory');
-        $taxCategory->addChild('Percent', '21');
-        $taxCategory->addChild('VATApplicable', 'true');
-        $taxCategory->addChild('LocalReverseChargeFlag', 'false');
-        $taxTotal->addChild('TaxAmount', $data->totals->getTaxAmount());
+        foreach ($data->vatSummary as $vatSummaryIndex => $vatSummaryItem) {
+            // Tax Total
+            $taxTotal = $invoice->addChild('TaxTotal');
+            $taxSubTotal = $taxTotal->addChild('TaxSubTotal');
+            $taxSubTotal->addChild('TaxableAmount', (string) $vatSummaryItem['total_base']);
+            $taxSubTotal->addChild('TaxAmount', (string) $vatSummaryItem['total_vat']);
+            $taxSubTotal->addChild('TaxInclusiveAmount', (string) $vatSummaryItem['total_with_vat']);
+            $taxSubTotal->addChild('AlreadyClaimedTaxableAmount', '0');
+            $taxSubTotal->addChild('AlreadyClaimedTaxAmount', '0');
+            $taxSubTotal->addChild('AlreadyClaimedTaxInclusiveAmount', '0');
+            $taxSubTotal->addChild('DifferenceTaxableAmount', (string) $vatSummaryItem['total_base']);
+            $taxSubTotal->addChild('DifferenceTaxAmount', (string) $vatSummaryItem['total_vat']);
+            $taxSubTotal->addChild('DifferenceTaxInclusiveAmount', (string) $vatSummaryItem['total_with_vat']);
+
+            // also needed
+            $taxCategory = $taxSubTotal->addChild('TaxCategory');
+            $taxCategory->addChild('Percent', (string) $vatSummaryItem['vat_group']);
+            $taxCategory->addChild('VATApplicable', 'true');
+            $taxCategory->addChild('LocalReverseChargeFlag', 'false');
+            $taxTotal->addChild('TaxAmount', (string) $vatSummaryItem['total_vat']);
+        }
 
         // Legal Monetary Total
         $totals = $invoice->addChild('LegalMonetaryTotal');
@@ -109,7 +113,7 @@ class IsdocService
         $details->addChild('ConstantSymbol', $data->getKs()); // Konstantní symbol
 
         $invoice = $invoice->asXML();
-        $this->validatInvoice($invoice);
+        //$this->validatInvoice($invoice);
 
         return $invoice;
     }

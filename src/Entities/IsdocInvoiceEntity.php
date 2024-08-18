@@ -40,6 +40,7 @@ final class IsdocInvoiceEntity
     public ?int $ss = null,
     public ?int $ks = null,
     public ?string $iban = null,
+    public array $vatSummary = [],  
   ) {}
 
   public function getInvoiceId(): string
